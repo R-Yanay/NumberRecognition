@@ -29,7 +29,7 @@ flowchart LR
     Canvas --> Preproc
     Preproc -->|Base64 28×28| Controller
     Controller --> Service
-    Service -->|INDArray [1,1,28,28]| Cnn
+    Service -->|"INDArray [1,1,28,28]"| Cnn
     Cnn -->|Wahrscheinlichkeiten| Controller
     Controller -->|JSON| Browser
 

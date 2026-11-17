@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handschrifterkennung</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        h1 { margin-bottom: 8px; font-size: 28px; }
+        .subtitle { color: #666; margin-bottom: 32px; }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: crosshair;
+            background: #000;
+            touch-action: none;
+        }
+        .buttons { margin: 20px 0; display: flex; gap: 12px; justify-content: center; }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-primary:hover { background: #1976D2; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-secondary:hover { background: #bdbdbd; }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background: #f0f7ff;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .digit { font-size: 72px; font-weight: bold; color: #2196F3; }
+        .confidence { font-size: 18px; color: #666; margin-top: 8px; }
+        .probabilities {
+            display: flex;
+            gap: 4px;
+            margin-top: 16px;
+            justify-content: center;
+        }
+        .prob-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 30px;
+        }
+        .prob-bar .bar {
+            width: 24px;
+            background: #2196F3;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s;
+        }
+        .prob-bar .label { font-size: 12px; color: #666; margin-top: 4px; }
+        .prob-bar .pct { font-size: 10px; color: #333; font-weight: bold; }
+        .status { color: #999; font-style: italic; }
+        .error { color: #d32f2f; }
+        .debug-panel {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            background: #fff8e1;
+            text-align: left;
+            font-size: 13px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .debug-panel.visible { display: block; }
+        .debug-toggle {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #f5f5f5;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .debug-toggle:hover { background: #e0e0e0; }
+        .debug-canvas {
+            border: 1px solid #999;
+            image-rendering: pixelated;
+            width: 140px;
+            height: 140px;
+            margin: 8px 0;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Handschrifterkennung</h1>
+    <p class="subtitle" id="subtitle">Zeichne eine Ziffer (0-9) und klicke auf "Erkennen"</p>
+
+    <div id="training-status" class="container" style="margin-bottom: 20px; background: #fff3e0;">
+        <p>Modell wird trainiert... Bitte warten.</p>
+        <p style="font-size: 14px; color: #999;">Die Seite aktualisiert sich automatisch, wenn das Modell bereit ist.</p>
+    </div>
+
+    <div class="container" id="main-container" style="display: none;">
+        <canvas id="canvas" width="280" height="280"></canvas>
+
+        <div class="buttons">
+            <button class="btn-primary" onclick="recognize()">Erkennen</button>
+            <button class="btn-secondary" onclick="clearCanvas()">L&ouml;schen</button>
+        </div>
+
+        <div class="result" id="result">
+            <span class="status">Zeichne eine Ziffer...</span>
+        </div>
+
+        <button class="debug-toggle" onclick="toggleDebug()">Debug-Info anzeigen</button>
+        <div class="debug-panel" id="debug-panel">
+            <div id="debug-content">Noch keine Erkennung durchgeführt.</div>
+        </div>
+    </div>
+
+    <script>
+        let statusCheckInterval;
+        let debugMode = false;
+        let lastProcessedCanvas = null;
+        let lastDebugInfo = null;
+
+        async function checkModelStatus() {
+            try {
+                const response = await fetch('/api/model/status');
+                const data = await response.json();
+
+                if (data.ready === true || data.ready === 'true') {
+                    document.getElementById('training-status').style.display = 'none';
+                    document.getElementById('main-container').style.display = 'block';
+                    clearInterval(statusCheckInterval);
+                    initCanvas();
+                } else if (data.status === 'ERROR') {
+                    document.getElementById('training-status').innerHTML =
+                        '<p style="color: #d32f2f;">Training fehlgeschlagen! Bitte starte die Anwendung neu.</p>';
+                    clearInterval(statusCheckInterval);
+                }
+            } catch (e) {
+                console.error('Server noch nicht erreichbar:', e);
+            }
+        }
+
+        let canvas, ctx;
+        let isDrawing = false;
+
+        function initCanvas() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 280, 280);
+
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(getTouchPos(e)); });
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(getTouchPos(e)); });
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        checkModelStatus();
+        statusCheckInterval = setInterval(checkModelStatus, 2000);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function getTouchPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            return {
+                offsetX: touch.clientX - rect.left,
+                offsetY: touch.clientY - rect.top
+            };
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 280, 280);
+            document.getElementById('result').innerHTML = '<span class="status">Zeichne eine Ziffer...</span>';
+            lastProcessedCanvas = null;
+            lastDebugInfo = null;
+            const debugContent = document.getElementById('debug-content');
+            if (debugContent) debugContent.textContent = 'Noch keine Erkennung durchgeführt.';
+        }
+
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const panel = document.getElementById('debug-panel');
+            const btn = document.querySelector('.debug-toggle');
+            if (debugMode) {
+                panel.classList.add('visible');
+                btn.textContent = 'Debug-Info ausblenden';
+                if (lastDebugInfo) showDebugInfo(lastDebugInfo, lastProcessedCanvas);
+            } else {
+                panel.classList.remove('visible');
+                btn.textContent = 'Debug-Info anzeigen';
+            }
+        }
+
+        function showDebugInfo(info, processedCanvas) {
+            const debugContent = document.getElementById('debug-content');
+            let html = '<strong>Bildvorverarbeitung:</strong><br>';
+            html += 'Bounding-Box: x=' + info.minX + '–' + info.maxX + ', y=' + info.minY + '–' + info.maxY + '<br>';
+            html += 'Crop-Größe: ' + info.cropWidth + '×' + info.cropHeight + ' Pixel<br>';
+            html += 'Skalierung: ' + info.scale.toFixed(3) + '<br>';
+            html += 'Zeichenelement-Position: (' + info.drawX.toFixed(1) + ', ' + info.drawY.toFixed(1) + ')<br>';
+            html += 'Helle Pixel: ' + info.brightPixels + ' / 784 (' + ((info.brightPixels / 784) * 100).toFixed(1) + '%)<br>';
+            html += 'Durchschnittshelligkeit: ' + info.avgBrightness.toFixed(0) + ' / 255<br><br>';
+
+            // Verarbeitetes 28x28 Bild als Canvas anzeigen
+            html += '<strong>Verarbeitetes 28×28 Bild:</strong><br>';
+            html += '<canvas id="debug-canvas" class="debug-canvas" width="28" height="28"></canvas><br><br>';
+
+            html += '<strong>Modell-Wahrscheinlichkeiten:</strong><br>';
+            const sorted = info.probabilities.map((p, i) => ({digit: i, prob: p})).sort((a, b) => b.prob - a.prob);
+            for (const item of sorted) {
+                const bar = '█'.repeat(Math.round(item.prob * 20)) + '░'.repeat(20 - Math.round(item.prob * 20));
+                const marker = item.digit === info.predictedDigit ? ' ← erkannt' : '';
+                html += item.digit + ': ' + (item.prob * 100).toFixed(1) + '% ' + bar + marker + '<br>';
+            }
+
+            debugContent.innerHTML = html;
+
+            // Verarbeitetes Bild auf Debug-Canvas zeichnen
+            if (processedCanvas) {
+                const debugCanvas = document.getElementById('debug-canvas');
+                if (debugCanvas) {
+                    const debugCtx = debugCanvas.getContext('2d');
+                    debugCtx.putImageData(processedCanvas, 0, 0);
+                }
+            }
+        }
+
+        async function recognize() {
+            const origData = ctx.getImageData(0, 0, 280, 280).data;
+            const origWidth = 280;
+            const origHeight = 280;
+
+            let minX = origWidth, minY = origHeight, maxX = 0, maxY = 0;
+            let brightPixelCount = 0;
+
+            for (let y = 0; y < origHeight; y++) {
+                for (let x = 0; x < origWidth; x++) {
+                    const idx = (y * origWidth + x) * 4;
+                    const val = origData[idx];
+                    if (val > 50) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        brightPixelCount++;
+                    }
+                }
+            }
+
+            // Bounding-Box mit dynamischem Padding - schmale Zahlen (wie "1") brauchen weniger horizontales Padding
+            const aspectRatio = cropWidth / cropHeight;
+            let horizontalPadding, verticalPadding;
+            if (aspectRatio < 0.4) {
+                // Schmale Zahlen (1, l) - weniger horizontales Padding
+                horizontalPadding = 10;
+                verticalPadding = 15;
+            } else {
+                // Normale Zahlen
+                horizontalPadding = 20;
+                verticalPadding = 20;
+            }
+            minX = Math.max(0, minX - horizontalPadding);
+            minY = Math.max(0, minY - verticalPadding);
+            maxX = Math.min(origWidth - 1, maxX + horizontalPadding);
+            maxY = Math.min(origHeight - 1, maxY + verticalPadding);
+            const cropWidth = maxX - minX;
+            const cropHeight = maxY - minY;
+
+            const intermediateSize = 56;
+            const midCanvas = document.createElement('canvas');
+            midCanvas.width = intermediateSize;
+            midCanvas.height = intermediateSize;
+            const midCtx = midCanvas.getContext('2d');
+            midCtx.fillStyle = '#000';
+            midCtx.fillRect(0, 0, intermediateSize, intermediateSize);
+
+            // Ziffer zentriert auf dem 56×56 Canvas platzieren
+            const margin = 4;
+            const availableSize = intermediateSize - 2 * margin;
+            const scale = Math.min(availableSize / cropWidth, availableSize / cropHeight);
+            const drawW = cropWidth * scale;
+            const drawH = cropHeight * scale;
+            const drawX = (intermediateSize - drawW) / 2;
+            const drawY = (intermediateSize - drawH) / 2;
+
+            midCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, drawX, drawY, drawW, drawH);
+
+            // Strichdicke normalisieren - MNIST-Bilder haben dünne Striche (~2-3 Pixel auf 28×28)
+            // Wenn die Zahl zu dick ist, wird sie als andere Zahl erkannt
+            const midData = midCtx.getImageData(0, 0, intermediateSize, intermediateSize).data;
+            const thinned = new Uint8ClampedArray(intermediateSize * intermediateSize * 4);
+            for (let y = 0; y < intermediateSize; y++) {
+                for (let x = 0; x < intermediateSize; x++) {
+                    const idx = (y * intermediateSize + x) * 4;
+                    const val = midData[idx];
+                    // Wenn Pixel hell ist, prüfen ob Nachbarn auch hell sind
+                    // Wenn ja, ist es ein dicker Strich - nur Randpixel behalten
+                    if (val > 50) {
+                        let isEdge = false;
+                        for (let dy = -2; dy <= 2; dy++) {
+                            for (let dx = -2; dx <= 2; dx++) {
+                                const nx = x + dx;
+                                const ny = y + dy;
+                                if (nx < 0 || nx >= intermediateSize || ny < 0 || ny >= intermediateSize) {
+                                    isEdge = true;
+                                } else {
+                                    const nIdx = (ny * intermediateSize + nx) * 4;
+                                    if (midData[nIdx] <= 50) isEdge = true;
+                                }
+                            }
+                        }
+                        thinned[idx] = isEdge ? val : 0;
+                        thinned[idx + 1] = isEdge ? val : 0;
+                        thinned[idx + 2] = isEdge ? val : 0;
+                        thinned[idx + 3] = 255;
+                    } else {
+                        thinned[idx] = 0;
+                        thinned[idx + 1] = 0;
+                        thinned[idx + 2] = 0;
+                        thinned[idx + 3] = 255;
+                    }
+                }
+            }
+            midCtx.putImageData(new ImageData(thinned, intermediateSize, intermediateSize), 0, 0);
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = 28;
+            finalCanvas.height = 28;
+            const finalCtx = finalCanvas.getContext('2d');
+            finalCtx.fillStyle = '#000';
+            finalCtx.fillRect(0, 0, 28, 28);
+            finalCtx.drawImage(midCanvas, 0, 0, intermediateSize, intermediateSize, 0, 0, 28, 28);
+
+            const imageData = finalCtx.getImageData(0, 0, 28, 28);
+            const bytes = new Uint8Array(784);
+            let totalBrightness = 0;
+            let brightPixels = 0;
+            for (let i = 0; i < 784; i++) {
+                bytes[i] = imageData.data[i * 4];
+                totalBrightness += imageData.data[i * 4];
+                if (imageData.data[i * 4] > 50) brightPixels++;
+            }
+            const avgBrightness = brightPixels > 0 ? totalBrightness / 784 : 0;
+            const base64 = btoa(String.fromCharCode(...bytes));
+
+            // Debug-Infos speichern
+            lastProcessedCanvas = imageData;
+            lastDebugInfo = {
+                minX: minX,
+                minY: minY,
+                maxX: maxX,
+                maxY: maxY,
+                cropWidth: cropWidth,
+                cropHeight: cropHeight,
+                scale: scale,
+                drawX: drawX,
+                drawY: drawY,
+                brightPixels: brightPixels,
+                avgBrightness: avgBrightness,
+                base64: base64
+            };
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<span class="status">Erkenne...</span>';
+
+            try {
+                const response = await fetch('/api/recognize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base64: base64 })
+                });
+
+                if (!response.ok) throw new Error('Server-Fehler');
+
+                const data = await response.json();
+                displayResult(data);
+
+                // Debug-Infos aktualisieren mit Wahrscheinlichkeiten
+                if (lastDebugInfo) {
+                    lastDebugInfo.probabilities = data.probabilities;
+                    lastDebugInfo.predictedDigit = data.digit;
+                    if (debugMode) {
+                        showDebugInfo(lastDebugInfo, lastProcessedCanvas);
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">Fehler: ' + error.message + '</span>';
+            }
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+
+            let barsHtml = '';
+            for (let i = 0; i <= 9; i++) {
+                const prob = data.probabilities[i] || 0;
+                const height = Math.max(2, prob * 100);
+                const pctText = (prob * 100).toFixed(1) + '%';
+                barsHtml += '<div class="prob-bar">' +
+                    '<div class="bar" style="height: ' + height + 'px; background: ' + (i === data.digit ? '#2196F3' : '#e0e0e0') + '"></div>' +
+                    '<span class="pct">' + pctText + '</span>' +
+                    '<span class="label">' + i + '</span>' +
+                    '</div>';
+            }
+
+            resultDiv.innerHTML =
+                '<div class="digit">' + data.digit + '</div>' +
+                '<div class="confidence">Konfidenz: ' + (data.confidence * 100).toFixed(1) + '%</div>' +
+                '<div class="probabilities">' + barsHtml + '</div>';
+        }
+    </script>
+</body>
+</html>

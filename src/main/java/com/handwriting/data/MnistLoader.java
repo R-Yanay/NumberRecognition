@@ -1,16 +1,19 @@
 package com.handwriting.data;
 
+import com.handwriting.config.ModelConfig;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.URL;
-import java.util.zip.GZIPInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.zip.GZIPInputStream;
 
 /**
- * Lädt den MNIST-Datensatz (70.000 handschriftliche Ziffern 0-9)
+ * Lädt den MNIST-Datensatz (70.000 handschriftliche Ziffern 0–9)
  * von http://yann.lecun.com/exdb/mnist/
  * <p>
  * MNIST Format (IDX-Files):
@@ -20,15 +23,13 @@ import java.nio.ByteOrder;
  */
 public class MnistLoader {
 
+    private static final Logger log = LoggerFactory.getLogger(MnistLoader.class);
+
     private static final String BASE_URL = "https://ossci-datasets.s3.amazonaws.com/mnist/";
     private static final String TRAIN_IMAGES = "train-images-idx3-ubyte.gz";
     private static final String TRAIN_LABELS = "train-labels-idx1-ubyte.gz";
     private static final String TEST_IMAGES = "t10k-images-idx3-ubyte.gz";
     private static final String TEST_LABELS = "t10k-labels-idx1-ubyte.gz";
-
-    private static final int IMAGE_HEIGHT = 28;
-    private static final int IMAGE_WIDTH = 28;
-    private static final int NUM_CLASSES = 10;
 
     /**
      * Lädt den MNIST-Trainingsdatensatz (60.000 Bilder)
@@ -64,7 +65,7 @@ public class MnistLoader {
      * Download und GZIP-Dekompression
      */
     private byte[] downloadAndDecompress(String urlStr) throws IOException {
-        System.out.println("Downloading: " + urlStr);
+        log.info("Downloading: {}", urlStr);
         URL url = new URL(urlStr);
 
         try (InputStream in = new GZIPInputStream(url.openStream());
@@ -91,20 +92,22 @@ public class MnistLoader {
         buffer.getInt(); // cols
 
         // Flaches Array: [numImages * 1 * 28 * 28]
-        float[] flat = new float[numImages * IMAGE_HEIGHT * IMAGE_WIDTH];
+        float[] flat = new float[numImages * ModelConfig.IMAGE_HEIGHT * ModelConfig.IMAGE_WIDTH];
 
         for (int i = 0; i < numImages; i++) {
-            for (int row = 0; row < IMAGE_HEIGHT; row++) {
-                for (int col = 0; col < IMAGE_WIDTH; col++) {
-                    // Normalisieren: 0-255 → 0.0-1.0 (wichtig: & 0xFF für unsigned byte)
-                    flat[i * IMAGE_HEIGHT * IMAGE_WIDTH + row * IMAGE_WIDTH + col] = (buffer.get() & 0xFF) / 255.0f;
+            for (int row = 0; row < ModelConfig.IMAGE_HEIGHT; row++) {
+                for (int col = 0; col < ModelConfig.IMAGE_WIDTH; col++) {
+                    // Normalisieren: 0–255 → 0.0–1.0 (& 0xFF für unsigned byte)
+                    flat[i * ModelConfig.IMAGE_HEIGHT * ModelConfig.IMAGE_WIDTH
+                            + row * ModelConfig.IMAGE_WIDTH + col] = (buffer.get() & 0xFF) / 255.0f;
                 }
             }
         }
 
         // Shape: [numImages, 1, 28, 28] (batch, channels, height, width)
         INDArray images = Nd4j.create(flat);
-        return images.reshape('c', numImages, 1, IMAGE_HEIGHT, IMAGE_WIDTH);
+        return images.reshape('c', numImages, 1,
+                ModelConfig.IMAGE_HEIGHT, ModelConfig.IMAGE_WIDTH);
     }
 
     /**
@@ -116,8 +119,8 @@ public class MnistLoader {
         buffer.getInt(); // magic number
         buffer.getInt(); // num labels
 
-        // One-Hot-Encoding: [7, 0, 0, 0, 0, 0, 0, 0, 0, 0] für Label 7
-        float[][] labels = new float[numLabels][NUM_CLASSES];
+        // One-Hot-Encoding: [0,0,0,1,0,0,0,0,0,0] für Label 3
+        float[][] labels = new float[numLabels][ModelConfig.NUM_CLASSES];
 
         for (int i = 0; i < numLabels; i++) {
             int label = buffer.get() & 0xFF;

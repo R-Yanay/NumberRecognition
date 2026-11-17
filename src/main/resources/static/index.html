@@ -279,7 +279,6 @@
             const origHeight = 280;
 
             let minX = origWidth, minY = origHeight, maxX = 0, maxY = 0;
-            let brightPixelCount = 0;
 
             for (let y = 0; y < origHeight; y++) {
                 for (let x = 0; x < origWidth; x++) {
@@ -290,23 +289,17 @@
                         if (x > maxX) maxX = x;
                         if (y < minY) minY = y;
                         if (y > maxY) maxY = y;
-                        brightPixelCount++;
                     }
                 }
             }
 
-            // Bounding-Box mit dynamischem Padding - schmale Zahlen (wie "1") brauchen weniger horizontales Padding
-            const aspectRatio = cropWidth / cropHeight;
-            let horizontalPadding, verticalPadding;
-            if (aspectRatio < 0.4) {
-                // Schmale Zahlen (1, l) - weniger horizontales Padding
-                horizontalPadding = 10;
-                verticalPadding = 15;
-            } else {
-                // Normale Zahlen
-                horizontalPadding = 20;
-                verticalPadding = 20;
-            }
+            // Bounding-Box mit dynamischem Padding
+            const rawWidth = maxX - minX;
+            const rawHeight = maxY - minY;
+            const aspectRatio = rawWidth / rawHeight;
+            const horizontalPadding = aspectRatio < 0.4 ? 10 : 20;
+            const verticalPadding = aspectRatio < 0.4 ? 15 : 20;
+
             minX = Math.max(0, minX - horizontalPadding);
             minY = Math.max(0, minY - verticalPadding);
             maxX = Math.min(origWidth - 1, maxX + horizontalPadding);

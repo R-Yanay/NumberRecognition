@@ -146,6 +146,35 @@ Das Training läuft asynchron im Hintergrund — der Webserver ist sofort verfü
 
 **Automatische Backups:** Nach jedem Training werden automatisch Backups auf Desktop und Documents erstellt.
 
+## Tests
+
+Das Projekt enthält **37 JUnit 5-Tests** in **7 Test-Klassen**, die die Kernkomponenten abdecken:
+
+| Test-Klasse | Tests | Abgedeckte Funktionalität |
+|-------------|-------|---------------------------|
+| `ModelConfigTest` | 7 | Bildabmessungen, Trainingsparameter, CNN-Architektur, Modell-Dateiname |
+| `PredictionResultTest` | 3 | Konstruktor, Getter, Wahrscheinlichkeitssumme |
+| `MnistDataTest` | 5 | Daten-Container, Image-Shape, Label-Shape, toString |
+| `MnistLoaderTest` | 3 | Pixel-Normalisierung, One-Hot-Encoding, `& 0xFF` unsigned byte Maskierung |
+| `CnnModelTest` | 11 | Architektur-Konfiguration, Vorhersage, Speichern/Laden, Fehlerbehandlung |
+| `RecognitionServiceTest` | 4 | Gültige Erkennung, leeres Base64, falsche Bildgröße, Wahrscheinlichkeitssumme |
+| `RecognitionControllerTest` | 4 | REST-Endpunkte `/recognize`, `/model/status` |
+
+**Kritische Tests:**
+- `MnistLoaderTest.unsignedByteMasking` — sichert ab, dass Pixelwerte > 127 nicht negativ werden (`& 0xFF` Bug)
+- `CnnModelTest.save_and_load_restoresModel` — sichert ab, dass Speichern und Laden das Modell intakt lässt
+- `RecognitionServiceTest.recognize_emptyBase64` — sichert ab, dass leere Bilder eine klare Fehlermeldung produzieren
+
+**Tests ausführen:**
+
+```bash
+mvn test
+```
+
+Ergebnis: 37 Tests, 0 Failures, 0 Errors, 0 Skipped — BUILD SUCCESS
+
+**Hinweis:** Da Java 25 Mockito Inline-Mocking blockiert, verwenden `RecognitionServiceTest` und `RecognitionControllerTest` echte CNN-Objekte statt Mocks. `MnistLoaderTest` verwendet synthetische IDX-Daten (kein Internet nötig).
+
 ## Projektstruktur
 
 ### Verzeichnisbaum
@@ -169,6 +198,19 @@ src/main/java/com/handwriting/
 │   └── RecognitionService.java             # Bildvorverarbeitung
 └── controller/
     └── RecognitionController.java          # REST-Endpunkte
+
+src/test/java/com/handwriting/
+├── config/
+│   └── ModelConfigTest.java               # 7 Tests: Konfigurationswerte
+├── data/
+│   ├── MnistDataTest.java                 # 5 Tests: Daten-Container
+│   └── MnistLoaderTest.java               # 3 Tests: Pixel-Normalisierung, One-Hot, & 0xFF
+├── model/
+│   └── CnnModelTest.java                  # 11 Tests: Architektur, Speichern/Laden
+├── service/
+│   └── RecognitionServiceTest.java        # 4 Tests: Erkennung, Fehlerbehandlung
+└── controller/
+    └── RecognitionControllerTest.java     # 4 Tests: REST-Endpunkte
 ```
 
 ### Klassendiagramm
@@ -191,32 +233,33 @@ classDiagram
     class MnistLoader {
         +loadTrainingData() MnistData
         +loadTestData() MnistData
-        -parseImages(File, int) INDArray
-        -parseLabels(File, int) INDArray
+        -parseImages(byte[], int) INDArray
+        -parseLabels(byte[], int) INDArray
     }
 
     class MnistData {
-        +INDArray features
+        +INDArray images
         +INDArray labels
-        +int getNumSamples()
+        +String name
+        +int size()
     }
 
     class CnnModel {
         +MultiLayerNetwork network
         +double testAccuracy
         +int epochsTrained
-        +buildModel()
+        +buildConfiguration() MultiLayerConfiguration
         +train(MnistData, MnistData)
-        +predict(INDArray) double[]
-        +load(MnistData)
-        +save(File)
+        +predict(INDArray) PredictionResult
+        +load(String, MnistData) boolean
+        +save(String)
         +isLoaded() boolean
     }
 
     class PredictionResult {
         +int digit
         +double confidence
-        +List~Double~ probabilities
+        +INDArray probabilities
     }
 
     class RecognitionRequest {
@@ -234,12 +277,12 @@ classDiagram
     class ModelTrainer {
         +CnnModel cnnModel
         +TrainingStatus status
-        +boolean modelLoaded
         +init()
         +doTraining()
         +trainAndSave()
+        +getCnnModel() CnnModel
         +getStatus() TrainingStatus
-        +createBackup()
+        -createBackup(String)
     }
 
     class RecognitionService {
@@ -278,12 +321,9 @@ classDiagram
 | Spring Boot | 3.4.x | REST API, Actuator |
 | Deeplearning4j | 1.0.0-M3.1 | CNN-Training und Inferenz |
 | ND4J | 1.0.0-M3.1 | Numerische Arrays |
+| JUnit 5 | 5.10.x | Unit-Tests (37 Tests) |
 | Java | 25 | Sprache |
 | Docker | — | Containerisierung |
-
-## CI/CD
-
-GitHub Actions testet und baut bei jedem Push auf `main`. Die JAR-Datei wird als Artifact gespeichert.
 
 ## Lessons Learned
 

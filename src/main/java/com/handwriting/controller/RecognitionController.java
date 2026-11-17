@@ -69,26 +69,6 @@ public class RecognitionController {
     }
 
     /**
-     * GET /api/model/info
-     * Gibt Informationen über das geladene Modell zurück
-     *
-     * @return Modell-Info (Accuracy, Epochen, geladen)
-     */
-    @GetMapping("/model/info")
-    public ResponseEntity<Map<String, Object>> modelInfo() {
-        CnnModel model = modelTrainer.getCnnModel();
-
-        Map<String, Object> info = Map.of(
-                "loaded", model.isLoaded(),
-                "testAccuracy", model.isLoaded() ? String.format("%.2f%%", model.getTestAccuracy() * 100) : "N/A",
-                "epochsTrained", model.getEpochsTrained(),
-                "architecture", "Conv2D(32) -> MaxPool -> Conv2D(64) -> MaxPool -> Dense(128) -> Dropout(0.5) -> Output(10)"
-        );
-
-        return ResponseEntity.ok(info);
-    }
-
-    /**
      * POST /api/train
      * Startet das Training neu (optional)
      *

@@ -44,33 +44,20 @@ public class ModelTrainer {
     public void init() {
         log.info("Initialisiere CNN-Modell...");
 
-        // Versuche, gespeichertes Modell zu laden
-        File modelFile = new File(ModelConfig.MODEL_FILE);
-        log.info("Modell-Datei prüfen: {} (Existiert: {})", ModelConfig.MODEL_FILE, modelFile.exists());
-        if (modelFile.exists()) {
-            log.info("Modell-Datei Größe: {} Bytes", modelFile.length());
-        }
         try {
-            // Testdaten laden, um die Accuracy beim Modell-Laden zu berechnen
             MnistLoader loader = new MnistLoader();
-            log.info("Lade MNIST-Testdaten für Accuracy-Prüfung...");
             MnistData testData = loader.loadTestData();
-            
+
             if (cnnModel.load(ModelConfig.MODEL_FILE, testData)) {
                 double acc = cnnModel.getTestAccuracy() * 100;
                 log.info("Gespeichertes Modell geladen (Accuracy: {}%)", String.format("%.2f", acc));
                 this.status = TrainingStatus.READY;
-                log.info("KEIN Training nötig. Modell ist sofort bereit.");
                 return;
-            } else {
-                log.info("cnnModel.load() gab false zurück – Datei nicht lesbar oder nicht gefunden.");
             }
         } catch (Exception e) {
-            log.warn("Gespeichertes Modell konnte nicht geladen werden: {}. Starte neues Training.", e.getMessage());
-            e.printStackTrace();
+            log.warn("Modell konnte nicht geladen werden: {}. Starte neues Training.", e.getMessage());
         }
 
-        // Kein Modell gefunden oder Laden fehlgeschlagen — Training in einem Hintergrund-Thread starten
         log.info("Starte Hintergrund-Training...");
         this.status = TrainingStatus.TRAINING;
         new Thread(this::doTraining, "CNN-Training").start();

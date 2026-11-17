@@ -31,6 +31,9 @@ model-backup*.zip
 # Logs
 *.log
 
+# Backups
+*.bak
+
 # OS
 .DS_Store
 Thumbs.db

@@ -180,7 +180,7 @@ Ergebnis: 37 Tests, 0 Failures, 0 Errors, 0 Skipped — BUILD SUCCESS
 ### Verzeichnisbaum
 
 ```
-src/main/java/com/handwriting/
+src/main/java/com/numbrecognition/
 ├── NumberRecognitionApplication.java  # Spring Boot Entry Point
 ├── config/
 │   └── ModelConfig.java                    # Hyperparameter
@@ -199,7 +199,7 @@ src/main/java/com/handwriting/
 └── controller/
     └── RecognitionController.java          # REST-Endpunkte
 
-src/test/java/com/handwriting/
+src/test/java/com/numbrecognition/
 ├── config/
 │   └── ModelConfigTest.java               # 7 Tests: Konfigurationswerte
 ├── data/

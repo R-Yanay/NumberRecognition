@@ -120,7 +120,7 @@ public class ModelTrainer {
             log.info("Backup 1 erstellt: {}", backup1);
 
             // Backup 2: Dedizierter Backup-Ordner
-            Path backupDir = documents.resolve("HandwritingModelBackups");
+            Path backupDir = documents.resolve("NumberRecognitionBackups");
             Files.createDirectories(backupDir);
             Path backup2 = backupDir.resolve(backupName);
             Files.copy(source.toPath(), backup2, StandardCopyOption.REPLACE_EXISTING);

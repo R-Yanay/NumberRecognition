@@ -1,4 +1,4 @@
-package com.handwriting.config;
+package com.numbrecognition.config;
 
 import org.junit.jupiter.api.Test;
 

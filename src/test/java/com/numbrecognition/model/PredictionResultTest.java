@@ -1,4 +1,4 @@
-package com.handwriting.model;
+package com.numbrecognition.model;
 
 import org.junit.jupiter.api.Test;
 import org.nd4j.linalg.factory.Nd4j;

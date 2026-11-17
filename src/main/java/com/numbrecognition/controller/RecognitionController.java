@@ -1,10 +1,10 @@
-package com.handwriting.controller;
+package com.numbrecognition.controller;
 
-import com.handwriting.dto.RecognitionRequest;
-import com.handwriting.dto.RecognitionResponse;
-import com.handwriting.model.CnnModel;
-import com.handwriting.service.ModelTrainer;
-import com.handwriting.service.RecognitionService;
+import com.numbrecognition.dto.RecognitionRequest;
+import com.numbrecognition.dto.RecognitionResponse;
+import com.numbrecognition.model.CnnModel;
+import com.numbrecognition.service.ModelTrainer;
+import com.numbrecognition.service.RecognitionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;

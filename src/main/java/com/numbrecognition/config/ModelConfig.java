@@ -1,4 +1,4 @@
-package com.handwriting.config;
+package com.numbrecognition.config;
 
 /**
  * Hyperparameter für das CNN-Modell

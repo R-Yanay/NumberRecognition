@@ -1,6 +1,6 @@
-package com.handwriting.data;
+package com.numbrecognition.data;
 
-import com.handwriting.config.ModelConfig;
+import com.numbrecognition.config.ModelConfig;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;

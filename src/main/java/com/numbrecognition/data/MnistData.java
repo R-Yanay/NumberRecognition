@@ -1,4 +1,4 @@
-package com.handwriting.data;
+package com.numbrecognition.data;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 

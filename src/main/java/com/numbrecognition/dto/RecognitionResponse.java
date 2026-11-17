@@ -1,4 +1,4 @@
-package com.handwriting.dto;
+package com.numbrecognition.dto;
 
 import java.util.List;
 

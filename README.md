@@ -1,6 +1,6 @@
-# Handschrifterkennung mit Java
+# Ziffernerkennung mit Java
 
-Spring Boot Anwendung, die handschriftliche Ziffern (0–9) mit einem Convolutional Neural Network (CNN) erkennt. Das Modell wird in Java mit Deeplearning4j trainiert und über eine REST API deployed. Ein Web-Frontend ermöglicht das Zeichnen mit der Maus.
+Spring Boot Anwendung, die Ziffern (0–9) mit einem Convolutional Neural Network (CNN) erkennt. Das Modell wird in Java mit Deeplearning4j trainiert und über eine REST API deployed. Ein Web-Frontend ermöglicht das Zeichnen mit der Maus.
 
 ## Architektur
 
@@ -74,8 +74,8 @@ Beim ersten Start wird das Modell automatisch mit dem MNIST-Datensatz trainiert 
 ### Docker
 
 ```bash
-docker build -t handwriting-recognition .
-docker run -p 8081:8081 handwriting-recognition
+docker build -t number-recognition .
+docker run -p 8081:8081 number-recognition
 ```
 
 ## Web-Frontend
@@ -181,7 +181,7 @@ Ergebnis: 37 Tests, 0 Failures, 0 Errors, 0 Skipped — BUILD SUCCESS
 
 ```
 src/main/java/com/handwriting/
-├── HandwritingRecognitionApplication.java  # Spring Boot Entry Point
+├── NumberRecognitionApplication.java  # Spring Boot Entry Point
 ├── config/
 │   └── ModelConfig.java                    # Hyperparameter
 ├── data/
@@ -219,7 +219,7 @@ src/test/java/com/handwriting/
 classDiagram
     direction LR
 
-    class HandwritingRecognitionApplication {
+    class NumberRecognitionApplication {
         +main(String[] args)
     }
 
@@ -299,7 +299,7 @@ classDiagram
     }
 
     %% Beziehungen
-    HandwritingRecognitionApplication --> RecognitionController : startet
+    NumberRecognitionApplication --> RecognitionController : startet
     RecognitionController --> RecognitionService : verwendet
     RecognitionController --> ModelTrainer : fragt Status
     RecognitionService --> ModelTrainer : verwendet

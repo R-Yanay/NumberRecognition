@@ -1,11 +1,11 @@
-package com.handwriting.controller;
+package com.numbrecognition.controller;
 
-import com.handwriting.config.ModelConfig;
-import com.handwriting.dto.RecognitionRequest;
-import com.handwriting.dto.RecognitionResponse;
-import com.handwriting.model.CnnModel;
-import com.handwriting.service.ModelTrainer;
-import com.handwriting.service.RecognitionService;
+import com.numbrecognition.config.ModelConfig;
+import com.numbrecognition.dto.RecognitionRequest;
+import com.numbrecognition.dto.RecognitionResponse;
+import com.numbrecognition.model.CnnModel;
+import com.numbrecognition.service.ModelTrainer;
+import com.numbrecognition.service.RecognitionService;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

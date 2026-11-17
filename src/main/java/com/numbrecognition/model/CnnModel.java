@@ -1,7 +1,7 @@
-package com.handwriting.model;
+package com.numbrecognition.model;
 
-import com.handwriting.config.ModelConfig;
-import com.handwriting.data.MnistData;
+import com.numbrecognition.config.ModelConfig;
+import com.numbrecognition.data.MnistData;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;

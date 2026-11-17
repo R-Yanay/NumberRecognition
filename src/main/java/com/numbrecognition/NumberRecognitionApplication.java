@@ -1,12 +1,12 @@
-package com.handwriting;
+package com.numbrecognition;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class HandwritingRecognitionApplication {
+public class NumberRecognitionApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(HandwritingRecognitionApplication.class, args);
+        SpringApplication.run(NumberRecognitionApplication.class, args);
     }
 }

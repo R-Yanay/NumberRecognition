@@ -1,9 +1,9 @@
-package com.handwriting.service;
+package com.numbrecognition.service;
 
-import com.handwriting.config.ModelConfig;
-import com.handwriting.data.MnistData;
-import com.handwriting.data.MnistLoader;
-import com.handwriting.model.CnnModel;
+import com.numbrecognition.config.ModelConfig;
+import com.numbrecognition.data.MnistData;
+import com.numbrecognition.data.MnistLoader;
+import com.numbrecognition.model.CnnModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

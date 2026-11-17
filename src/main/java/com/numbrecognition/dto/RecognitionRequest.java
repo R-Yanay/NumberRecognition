@@ -1,4 +1,4 @@
-package com.handwriting.dto;
+package com.numbrecognition.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

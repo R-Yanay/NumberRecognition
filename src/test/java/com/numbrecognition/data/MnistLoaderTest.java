@@ -1,6 +1,6 @@
-package com.handwriting.data;
+package com.numbrecognition.data;
 
-import com.handwriting.config.ModelConfig;
+import com.numbrecognition.config.ModelConfig;
 import org.junit.jupiter.api.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 

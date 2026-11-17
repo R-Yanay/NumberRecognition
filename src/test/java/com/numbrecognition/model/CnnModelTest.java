@@ -1,6 +1,6 @@
-package com.handwriting.model;
+package com.numbrecognition.model;
 
-import com.handwriting.config.ModelConfig;
+import com.numbrecognition.config.ModelConfig;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.junit.jupiter.api.Test;
